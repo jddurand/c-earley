@@ -12,7 +12,6 @@ typedef enum   earley_rule_property    earley_rule_property_t;
 typedef enum   earley_rule_event       earley_rule_event_t;
 typedef struct earley_rule             earley_rule_t;
 
-typedef enum   earley_grammar_event    earley_grammar_event_t;
 typedef struct earley_grammar          earley_grammar_t;
 
 /* Symbol properties */
@@ -55,11 +54,6 @@ enum earley_rule_event {
   EARLEY_RULE_EVENT_PREDICTED  = 0x02
 };
 
-/* Grammar events */
-enum earley_grammar_event {
-  EARLEY_GRAMMAR_EVENT_EXHAUSTED = 0x01
-};
-
 /* A rule has properties, events, is a symbol on the left (LHS), symbols on the right (RHSs) */
 struct earley_rule {
   earley_rule_property_t  propertyBitSet;
@@ -69,9 +63,8 @@ struct earley_rule {
   size_t                  rhsArrayl;
 };
 
-/* A grammar has properties, symbols, rules */
+/* A grammar is made of symbols and rules, has a start rule */
 struct earley_grammar {
-  earley_grammar_event_t     eventBitSet;
   earley_symbol_t           *symbolArrayp;
   size_t                     symbolArrayl;
   earley_rule_t             *ruleArrayp;
