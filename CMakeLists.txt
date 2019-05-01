@@ -13,7 +13,7 @@ MYPACKAGESTART (earley 1 0 0)
 MYPACKAGELIBRARY(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in
   ${INCLUDE_OUTPUT_PATH}/earley/internal/config.h
-  src/earley.c)
+  src/earley/grammar.c)
 
 ###############
 # Executables #
@@ -23,6 +23,7 @@ MYPACKAGELIBRARY(
 # Dependencies #
 ################
 MYPACKAGEDEPENDENCY (genericLogger "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/github/genericLogger" LIBS LOCAL)
+MYPACKAGEDEPENDENCY (genericStack "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/github/genericStack" LIBS LOCAL)
 
 #########
 # Tests #
