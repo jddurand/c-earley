@@ -50,7 +50,7 @@ earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *optionp)
 /****************************************************************************/
 /* earleyGrammar_clonep                                                     */
 /****************************************************************************/
-earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, earleyGrammarCloneOption_t *earleyGrammarCloneOptionp)
+earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, earleyGrammarCloneOption_t *optionp)
 {
   earleyGrammar_t *earleyGrammarp = NULL;
   genericStack_t  *symbolStackp;
@@ -101,8 +101,8 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
       goto err;
     }
     /* Apply clone options */
-    if (earleyGrammarCloneOptionp != NULL) {
-      if (! earleyGrammarCloneOptionp->symbolOptionSetterp(earleyGrammarCloneOptionp->userDatavp, earleySymbolp->idi, &(earleySymbolp->option))) {
+    if (optionp != NULL) {
+      if (! optionp->symbolOptionSetterp(optionp->userDatavp, earleySymbolp->idi, &(earleySymbolp->option))) {
         goto err;
       }
     }
@@ -130,16 +130,16 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
       goto err;
     }
     /* Apply clone options */
-    if (earleyGrammarCloneOptionp != NULL) {
-      if (! earleyGrammarCloneOptionp->ruleOptionSetterp(earleyGrammarCloneOptionp->userDatavp, earleyRulep->idi, &(earleyRulep->option))) {
+    if (optionp != NULL) {
+      if (! optionp->ruleOptionSetterp(optionp->userDatavp, earleyRulep->idi, &(earleyRulep->option))) {
         goto err;
       }
     }
   }
 
   /* Apply clone options */
-  if (earleyGrammarCloneOptionp != NULL) {
-    if (! earleyGrammarCloneOptionp->grammarOptionSetterp(earleyGrammarCloneOptionp->userDatavp, &(earleyGrammarp->option))) {
+  if (optionp != NULL) {
+    if (! optionp->grammarOptionSetterp(optionp->userDatavp, &(earleyGrammarp->option))) {
       goto err;
     }
   }
