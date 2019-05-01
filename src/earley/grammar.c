@@ -9,7 +9,7 @@
 /****************************************************************************/
 /* earleyGrammar_newp                                                       */
 /****************************************************************************/
-earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *earleyGrammarOptionp)
+earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *optionp)
 {
   earleyGrammar_t *earleyGrammarp;
 
@@ -18,10 +18,10 @@ earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *earleyGrammarOptionp)
     goto err;
   }
 
-  earleyGrammarp->symbolStackp        = NULL;
-  earleyGrammarp->ruleStackp          = NULL;
-  earleyGrammarp->precomputedb        = 0;
-  earleyGrammarp->earleyGrammarOption = (earleyGrammarOptionp != NULL) ? *earleyGrammarOptionp : earleyGrammarOptionDefault;
+  earleyGrammarp->symbolStackp = NULL;
+  earleyGrammarp->ruleStackp   = NULL;
+  earleyGrammarp->precomputedb = 0;
+  earleyGrammarp->option       = (optionp != NULL) ? *optionp : earleyGrammarOptionDefault;
 
   earleyGrammarp->symbolStackp = &(earleyGrammarp->_symbolStack);
   GENERICSTACK_INIT(earleyGrammarp->symbolStackp);
@@ -100,6 +100,12 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
     if (GENERICSTACK_ERROR(symbolStackp)) {
       goto err;
     }
+    /* Apply clone options */
+    if (earleyGrammarCloneOptionp != NULL) {
+      if (! earleyGrammarCloneOptionp->symbolOptionSetterp(earleyGrammarCloneOptionp->userDatavp, earleySymbolp->idi, &(earleySymbolp->option))) {
+        goto err;
+      }
+    }
   }
 
   /* Duplicate rule stack */
@@ -123,6 +129,19 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
     if (GENERICSTACK_ERROR(ruleStackp)) {
       goto err;
     }
+    /* Apply clone options */
+    if (earleyGrammarCloneOptionp != NULL) {
+      if (! earleyGrammarCloneOptionp->ruleOptionSetterp(earleyGrammarCloneOptionp->userDatavp, earleyRulep->idi, &(earleyRulep->option))) {
+        goto err;
+      }
+    }
+  }
+
+  /* Apply clone options */
+  if (earleyGrammarCloneOptionp != NULL) {
+    if (! earleyGrammarCloneOptionp->grammarOptionSetterp(earleyGrammarCloneOptionp->userDatavp, &(earleyGrammarp->option))) {
+      goto err;
+    }
   }
 
   goto done;
@@ -136,7 +155,7 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
 }
 
 /****************************************************************************/
-/* earleyGrammar_clonep                                                     */
+/* earleyGrammar_freev                                                      */
 /****************************************************************************/
 void earleyGrammar_freev(earleyGrammar_t *earleyGrammarp)
 {

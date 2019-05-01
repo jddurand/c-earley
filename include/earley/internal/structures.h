@@ -14,18 +14,27 @@ earleyGrammarOption_t earleyGrammarOptionDefault = {
   0  /* autorankb */
 };
 
+earleyGrammarCloneOption_t earleyGrammarCloneOptionDefault = {
+  NULL, /* userDatavp */
+  NULL, /* grammarOptionSetterp */
+  NULL, /* symbolOptionSetterp */
+  NULL /* ruleOptionSetterp */
+};
+
 struct earleySymbol {
-  int idi;
-  int propertyBitSeti;
-  int eventBitSeti;
+  int                         idi;
+  int                         propertyBitSeti;
+  int                         eventBitSeti;
+  earleyGrammarSymbolOption_t option;
 };
 
 struct earleyRule {
-  int idi;
-  int lshi;
-  genericStack_t _rhsStack;
-  genericStack_t *rhsStackp;
-  int propertyBitSeti;
+  int                       idi;
+  int                       lshi;
+  genericStack_t            _rhsStack;
+  genericStack_t            *rhsStackp;
+  int                        propertyBitSeti;
+  earleyGrammarRuleOption_t  option;
 };
 
 struct earleyGrammar {
@@ -34,7 +43,7 @@ struct earleyGrammar {
   genericStack_t        _ruleStack;
   genericStack_t       *ruleStackp;
   short                 precomputedb;
-  earleyGrammarOption_t earleyGrammarOption;
+  earleyGrammarOption_t option;
 };
 
 #endif /* EARLEY_INTERNAL_STRUCTURES_H */

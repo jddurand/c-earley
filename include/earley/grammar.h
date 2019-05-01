@@ -84,7 +84,7 @@ typedef short (*earleyGrammar_symbolOptionSetter_t)(void *userDatavp, int symbol
 typedef short (*earleyGrammar_ruleOptionSetter_t)(void *userDatavp, int rulei, earleyGrammarRuleOption_t *earleyGrammarRuleOptionp);
 
 typedef struct earleyGrammarCloneOption {
-  void                                      *userDatavp;           /* Default: NULL. User context */
+  void                                *userDatavp;           /* Default: NULL. User context */
   earleyGrammar_grammarOptionSetter_t  grammarOptionSetterp; /* Default: NULL. Overwrite grammar option */
   earleyGrammar_symbolOptionSetter_t   symbolOptionSetterp;  /* Default: NULL. Overwrite event symbol option */
   earleyGrammar_ruleOptionSetter_t     ruleOptionSetterp;    /* Default: NULL. Overwrite event rule option */
