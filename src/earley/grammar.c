@@ -9,10 +9,10 @@
 #include "earley/internal/config.h"
 #include "earley/internal/structures.h"
 
-static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli);
-static earleyRule_t   *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei);
-static void            earleySymbol_freev(earleySymbol_t *earleySymbolp);
-static void            earleyRule_freev(earleyRule_t *earleyRulep);
+static inline earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli);
+static inline earleyRule_t   *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei);
+static inline void            earleySymbol_freev(earleySymbol_t *earleySymbolp);
+static inline void            earleyRule_freev(earleyRule_t *earleyRulep);
 
 #define EARLEYGRAMMAR_ERROR(earleyGrammarp, strings) do {               \
     if ((earleyGrammarp != NULL) && (earleyGrammarp->option.genericLoggerp != NULL)) { \
@@ -27,7 +27,7 @@ static void            earleyRule_freev(earleyRule_t *earleyRulep);
   } while (0)
 
 /****************************************************************************/
-static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli)
+static inline earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli)
 /****************************************************************************/
 {
   genericStack_t *symbolStackp;
@@ -62,7 +62,7 @@ static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int sy
 }
 
 /****************************************************************************/
-static earleyRule_t *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei)
+static inline earleyRule_t *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei)
 /****************************************************************************/
 {
   genericStack_t *ruleStackp;
@@ -97,7 +97,7 @@ static earleyRule_t *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei)
 }
 
 /****************************************************************************/
-static void earleySymbol_freev(earleySymbol_t *earleySymbolp)
+static inline void earleySymbol_freev(earleySymbol_t *earleySymbolp)
 /****************************************************************************/
 {
   if (earleySymbolp != NULL) {
@@ -106,7 +106,7 @@ static void earleySymbol_freev(earleySymbol_t *earleySymbolp)
 }
 
 /****************************************************************************/
-static void earleyRule_freev(earleyRule_t *earleyRulep)
+static inline void earleyRule_freev(earleyRule_t *earleyRulep)
 /****************************************************************************/
 {
   if (earleyRulep != NULL) {
@@ -207,14 +207,8 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
   symbolStackp = earleyGrammarp->symbolStackp;
   symbolOriginStackp = earleyGrammarOriginp->symbolStackp;
   for (i = 0; i < GENERICSTACK_USED(symbolOriginStackp); i++) {
-    earleySymbolOriginp = (earleySymbol_t *) GENERICSTACK_GET_PTR(symbolOriginStackp, i);
-    if (GENERICSTACK_ERROR(symbolOriginStackp)) {
-      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
-      goto err;
-    }
+    earleySymbolOriginp = earleySymbol_getp(earleyGrammarOriginp, i);
     if (earleySymbolOriginp == NULL) {
-      EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "earleySymbolOriginp is NULL\n");
-      errno = EINVAL;
       goto err;
     }
     earleySymbolp = (earleySymbol_t *) malloc(sizeof(earleySymbol_t));
@@ -241,14 +235,8 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
   ruleStackp = earleyGrammarp->ruleStackp;
   ruleOriginStackp = earleyGrammarOriginp->ruleStackp;
   for (i = 0; i < GENERICSTACK_USED(ruleOriginStackp); i++) {
-    earleyRuleOriginp = (earleyRule_t *) GENERICSTACK_GET_PTR(ruleOriginStackp, i);
-    if (GENERICSTACK_ERROR(ruleOriginStackp)) {
-      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
-      goto err;
-    }
+    earleyRuleOriginp = earleyRule_getp(earleyGrammarOriginp, i);
     if (earleyRuleOriginp == NULL) {
-      EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "earleyRuleOriginp is NULL\n");
-      errno = EINVAL;
       goto err;
     }
     earleyRulep = (earleyRule_t *) malloc(sizeof(earleyRule_t));
