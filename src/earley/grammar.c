@@ -548,7 +548,7 @@ int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short 
 /****************************************************************************/
 {
   earleyGrammarRuleOption_t option               = earleyGrammarRuleOptionDefault;
-  static const int          rhsSymbolStartAllocl = 16; /* Totally subjective -; */
+  static const size_t       rhsSymbolStartAllocl = 16; /* Totally subjective -; */
   size_t                    rhsSymbolAllocl      = 0;
   size_t                    rhsSymboll           = 0;
   size_t                    l                    = 0;
@@ -571,7 +571,7 @@ int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short 
           EARLEYGRAMMAR_ERRORF(earleyGrammarp, "malloc failure, %s\n", strerror(errno));
           goto err;
         }
-        rhsSymbolAllocl == rhsSymbolStartAllocl;
+        rhsSymbolAllocl = rhsSymbolStartAllocl;
       } else {
         tmpl = rhsSymbolAllocl * 2;
         /* Detect very improbable turnaround */
@@ -586,6 +586,7 @@ int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short 
           goto err;
         }
         rhsSymbolip = tmpip;
+        rhsSymbolAllocl = tmpl;
       }
     }
 

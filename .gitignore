@@ -50,3 +50,42 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Visual Studio garbage
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.opensdf
+*.sln
+*.suo
+*.sdf
+*.dir/
+Testing/
+Win32/
+ipch/
+*.psess
+*.vsp
+
+# Code::Blocks garbage
+*.cbp
+*.layout
+
+# Valgrind garbage
+*.out.*
+
+# Our garbage
+*~
+output/
+*.gz
+*.3
+config.h
+cmake-build/
+*.pdb
+LICENSE.txt
+CPackCustomProjectConfig.cmake
+CMakeCache.txt
+CMakeFiles/
+CPack*
+CTest*
+cmake_install.cmake
+*.VC.*
