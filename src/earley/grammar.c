@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
+#include <genericLogger.h>
 #include <genericStack.h>
 
 #include "earley/grammar.h"
@@ -11,6 +13,18 @@ static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int sy
 static earleyRule_t   *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei);
 static void            earleySymbol_freev(earleySymbol_t *earleySymbolp);
 static void            earleyRule_freev(earleyRule_t *earleyRulep);
+
+#define EARLEYGRAMMAR_ERROR(earleyGrammarp, strings) do {               \
+    if ((earleyGrammarp != NULL) && (earleyGrammarp->option.genericLoggerp != NULL)) { \
+      GENERICLOGGER_ERROR(earleyGrammarp->option.genericLoggerp, strings); \
+    }                                                                   \
+  } while (0)
+
+#define EARLEYGRAMMAR_ERRORF(earleyGrammarp, fmts, ...) do {            \
+    if ((earleyGrammarp != NULL) && (earleyGrammarp->option.genericLoggerp != NULL)) { \
+      GENERICLOGGER_ERRORF(earleyGrammarp->option.genericLoggerp, fmts, __VA_ARGS__); \
+    }                                                                   \
+  } while (0)
 
 /****************************************************************************/
 static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli)
@@ -27,12 +41,14 @@ static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int sy
   symbolStackp = earleyGrammarp->symbolStackp;
 
   if (! GENERICSTACK_IS_PTR(symbolStackp, symboli)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "No such symbol %d\n", symboli);
     errno = ENOENT;
     goto err;
   }
 
   earleySymbolp = GENERICSTACK_GET_PTR(symbolStackp, symboli);
   if (GENERICSTACK_ERROR(symbolStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -60,12 +76,14 @@ static earleyRule_t *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei)
   ruleStackp = earleyGrammarp->ruleStackp;
 
   if (! GENERICSTACK_IS_PTR(ruleStackp, rulei)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "No such rule %d\n", rulei);
     errno = ENOENT;
     goto err;
   }
 
   earleyRulep = GENERICSTACK_GET_PTR(ruleStackp, rulei);
   if (GENERICSTACK_ERROR(ruleStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -105,21 +123,30 @@ static void earleyRule_freev(earleyRule_t *earleyRulep)
 earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *optionp)
 {
   earleyGrammar_t *earleyGrammarp;
+  genericLogger_t *genericLoggerp;
+
+  if (optionp == NULL) {
+    optionp = &earleyGrammarOptionDefault;
+  }
+
+  genericLoggerp = optionp->genericLoggerp;
 
   earleyGrammarp = (earleyGrammar_t *) malloc(sizeof(earleyGrammar_t));
   if (earleyGrammarp == NULL) {
+    GENERICLOGGER_ERRORF(genericLoggerp, "malloc failure: %s", strerror(errno));
     goto err;
   }
 
   earleyGrammarp->symbolStackp = NULL;
   earleyGrammarp->ruleStackp   = NULL;
   earleyGrammarp->errori       = 0;
-  earleyGrammarp->option       = (optionp != NULL) ? *optionp : earleyGrammarOptionDefault;
+  earleyGrammarp->option       = *optionp;
   earleyGrammarp->precomputedb = 0;
 
   earleyGrammarp->symbolStackp = &(earleyGrammarp->_symbolStack);
   GENERICSTACK_INIT(earleyGrammarp->symbolStackp);
   if (GENERICSTACK_ERROR(earleyGrammarp->symbolStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_INIT failure, %s\n", strerror(errno));
     earleyGrammarp->symbolStackp = NULL;
     goto err;
   }
@@ -127,6 +154,7 @@ earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *optionp)
   earleyGrammarp->ruleStackp = &(earleyGrammarp->_ruleStack);
   GENERICSTACK_INIT(earleyGrammarp->ruleStackp);
   if (GENERICSTACK_ERROR(earleyGrammarp->ruleStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_INIT failure, %s\n", strerror(errno));
     earleyGrammarp->ruleStackp = NULL;
     goto err;
   }
@@ -164,12 +192,14 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
 
   /* Only precomputed grammars can be cloned */
   if (! earleyGrammarOriginp->precomputedb) {
+    EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "Grammar must be precomputed\n");
     errno = EINVAL;
     goto err;
   }
 
   earleyGrammarp = earleyGrammar_newp(NULL);
   if (earleyGrammarp == NULL) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "malloc failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -179,24 +209,29 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
   for (i = 0; i < GENERICSTACK_USED(symbolOriginStackp); i++) {
     earleySymbolOriginp = (earleySymbol_t *) GENERICSTACK_GET_PTR(symbolOriginStackp, i);
     if (GENERICSTACK_ERROR(symbolOriginStackp)) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
       goto err;
     }
     if (earleySymbolOriginp == NULL) {
+      EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "earleySymbolOriginp is NULL\n");
       errno = EINVAL;
       goto err;
     }
     earleySymbolp = (earleySymbol_t *) malloc(sizeof(earleySymbol_t));
     if (earleySymbolp == NULL) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "malloc failure, %s\n", strerror(errno));
       goto err;
     }
     *earleySymbolp = *earleySymbolOriginp;
     GENERICSTACK_PUSH_PTR(symbolStackp, earleySymbolp);
     if (GENERICSTACK_ERROR(symbolStackp)) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_PUSH_PTR failure, %s\n", strerror(errno));
       goto err;
     }
     /* Apply clone options */
     if (optionp != NULL) {
       if (! optionp->symbolOptionSetterp(optionp->userDatavp, earleySymbolp->idi, &(earleySymbolp->option))) {
+        EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "symbolOptionSetterp failure\n");
         goto err;
       }
     }
@@ -208,24 +243,29 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
   for (i = 0; i < GENERICSTACK_USED(ruleOriginStackp); i++) {
     earleyRuleOriginp = (earleyRule_t *) GENERICSTACK_GET_PTR(ruleOriginStackp, i);
     if (GENERICSTACK_ERROR(ruleOriginStackp)) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_GET_PTR failure, %s\n", strerror(errno));
       goto err;
     }
     if (earleyRuleOriginp == NULL) {
+      EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "earleyRuleOriginp is NULL\n");
       errno = EINVAL;
       goto err;
     }
     earleyRulep = (earleyRule_t *) malloc(sizeof(earleyRule_t));
     if (earleyRulep == NULL) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "malloc failure, %s\n", strerror(errno));
       goto err;
     }
     *earleyRulep = *earleyRuleOriginp;
     GENERICSTACK_PUSH_PTR(ruleStackp, earleyRulep);
     if (GENERICSTACK_ERROR(ruleStackp)) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarOriginp, "GENERICSTACK_PUSH_PTR failure, %s\n", strerror(errno));
       goto err;
     }
     /* Apply clone options */
     if (optionp != NULL) {
       if (! optionp->ruleOptionSetterp(optionp->userDatavp, earleyRulep->idi, &(earleyRulep->option))) {
+        EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "ruleOptionSetterp failure\n");
         goto err;
       }
     }
@@ -234,6 +274,7 @@ earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, ear
   /* Apply clone options */
   if (optionp != NULL) {
     if (! optionp->grammarOptionSetterp(optionp->userDatavp, &(earleyGrammarp->option))) {
+      EARLEYGRAMMAR_ERROR(earleyGrammarOriginp, "grammarOptionSetterp failure\n");
       goto err;
     }
   }
@@ -302,6 +343,7 @@ int earleyGrammar_newSymboli(earleyGrammar_t *earleyGrammarp, earleyGrammarSymbo
 
   earleySymbolp = (earleySymbol_t *) malloc(sizeof(earleySymbol_t));
   if (earleySymbolp == NULL) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "malloc failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -312,6 +354,7 @@ int earleyGrammar_newSymboli(earleyGrammar_t *earleyGrammarp, earleyGrammarSymbo
 
   GENERICSTACK_PUSH_PTR(symbolStackp, earleySymbolp);
   if (GENERICSTACK_ERROR(symbolStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_PUSH_PTR failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -411,6 +454,7 @@ int earleyGrammar_newRulei(earleyGrammar_t *earleyGrammarp, earleyGrammarRuleOpt
 
   earleyRulep = (earleyRule_t *) malloc(sizeof(earleyRule_t));
   if (earleyRulep == NULL) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "malloc failure, %s\n", strerror(errno));
     goto err;
   }
 
@@ -423,6 +467,7 @@ int earleyGrammar_newRulei(earleyGrammar_t *earleyGrammarp, earleyGrammarRuleOpt
   rhsStackp = &(earleyRulep->_rhsStack);
   GENERICSTACK_INIT(rhsStackp);
   if (GENERICSTACK_ERROR(rhsStackp)) {
+    EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_INIT failure, %s\n", strerror(errno));
     goto err;
   }
   earleyRulep->rhsStackp = rhsStackp;
@@ -438,6 +483,7 @@ int earleyGrammar_newRulei(earleyGrammar_t *earleyGrammarp, earleyGrammarRuleOpt
     }
     GENERICSTACK_PUSH_PTR(rhsStackp, earleySymbolp);
     if (GENERICSTACK_ERROR(rhsStackp)) {
+      EARLEYGRAMMAR_ERRORF(earleyGrammarp, "GENERICSTACK_PUSH_PTR failure, %s\n", strerror(errno));
       goto err;
     }
   }
@@ -522,6 +568,7 @@ int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short 
       if (rhsSymbolAllocl == 0) {
         rhsSymbolip = (int *) malloc(rhsSymbolStartAllocl * sizeof(int));
         if (rhsSymbolip == NULL) {
+          EARLEYGRAMMAR_ERRORF(earleyGrammarp, "malloc failure, %s\n", strerror(errno));
           goto err;
         }
         rhsSymbolAllocl == rhsSymbolStartAllocl;
@@ -529,11 +576,13 @@ int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short 
         tmpl = rhsSymbolAllocl * 2;
         /* Detect very improbable turnaround */
         if (tmpl < rhsSymbolAllocl) {
+          EARLEYGRAMMAR_ERROR(earleyGrammarp, "size_t turnaround\n");
           errno = EINVAL;
           goto err;
         }
         tmpip = (int *) realloc(rhsSymbolip, tmpl * sizeof(int));
         if (tmpip == NULL) {
+          EARLEYGRAMMAR_ERRORF(earleyGrammarp, "realloc failure, %s\n", strerror(errno));
           goto err;
         }
         rhsSymbolip = tmpip;

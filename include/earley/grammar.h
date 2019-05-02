@@ -5,6 +5,7 @@
 #include <stdarg.h>
 
 #include <earley/export.h>
+#include <genericLogger.h>
 
 /* ---------------- */
 /* Opaque structure */
@@ -57,6 +58,7 @@ typedef struct earleyGrammarRuleOption {
 /* General options */
 /* --------------- */
 typedef struct earleyGrammarOption {
+  genericLogger_t *genericLoggerp;             /* Default: NULL.                                      */
   short            warningIsErrorb;            /* Default: 0. Have precedence over warningIsIgnoredb  */
   short            warningIsIgnoredb;          /* Default: 0.                                         */
   short            autorankb;                  /* Default: 0.                                         */
