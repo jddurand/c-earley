@@ -21,7 +21,7 @@ typedef enum earleyGrammarEventType {
   EARLEYGRAMMAR_EVENTTYPE_PREDICTION = 0x04
 } earleyGrammarEventType_t;
 
-/* Possile triggered events */
+/* Possible triggered events */
 typedef struct earleyGrammarEvent {
   enum {
     EARLEYGRAMMAR_EVENT_COMPLETED,
@@ -48,7 +48,7 @@ typedef struct earleyGrammarRuleOption {
   int    ranki;          /* Default: 0. Rank                                        */
   short  nullRanksHighb; /* Default: 0. Null variant pattern                        */
   short  sequenceb;      /* Default: 0. Sequence ?                                  */
-  int    separatorSymboli; /* Default: NULL. Eventual separator symbol              */
+  int    separatorSymboli; /* Default: -1. Eventual separator symbol                */
   short  properb;        /* Default: 0. Proper flag                                 */
   int    minimumi;       /* Default: 0. Mininimum - must be 0 or 1                  */
 } earleyGrammarRuleOption_t;
@@ -96,6 +96,9 @@ extern "C" {
   earley_EXPORT earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *earleyGrammarOptionp);
   earley_EXPORT earleyGrammar_t *earleyGrammar_clonep(earleyGrammar_t *earleyGrammarOriginp, earleyGrammarCloneOption_t *earleyGrammarCloneOptionp);
   earley_EXPORT void             earleyGrammar_freev(earleyGrammar_t *earleyGrammarp);
+
+  earley_EXPORT short            earleyGrammar_errorb(earleyGrammar_t *earleyGrammarp, int *errorip);
+  earley_EXPORT short            earleyGrammar_error_clearb(earleyGrammar_t *earleyGrammarp);
 
   earley_EXPORT int              earleyGrammar_newSymboli(earleyGrammar_t *earleyGrammarp, earleyGrammarSymbolOption_t *earleyGrammarSymbolOptionp);
   earley_EXPORT short            earleyGrammar_symbolPropertyb(earleyGrammar_t *earleyGrammarp, int symboli, int *earleySymbolPropertyBitSetp);

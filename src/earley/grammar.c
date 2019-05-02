@@ -1,10 +1,103 @@
 #include <errno.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <genericStack.h>
 
 #include "earley/grammar.h"
 #include "earley/internal/config.h"
 #include "earley/internal/structures.h"
+
+static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli);
+static earleyRule_t   *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei);
+static void            earleySymbol_freev(earleySymbol_t *earleySymbolp);
+static void            earleyRule_freev(earleyRule_t *earleyRulep);
+
+/****************************************************************************/
+static earleySymbol_t *earleySymbol_getp(earleyGrammar_t *earleyGrammarp, int symboli)
+/****************************************************************************/
+{
+  genericStack_t *symbolStackp;
+  earleySymbol_t *earleySymbolp;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  symbolStackp = earleyGrammarp->symbolStackp;
+
+  if (! GENERICSTACK_IS_PTR(symbolStackp, symboli)) {
+    errno = ENOENT;
+    goto err;
+  }
+
+  earleySymbolp = GENERICSTACK_GET_PTR(symbolStackp, symboli);
+  if (GENERICSTACK_ERROR(symbolStackp)) {
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  earleySymbolp = NULL;
+
+ done:
+  return earleySymbolp;
+}
+
+/****************************************************************************/
+static earleyRule_t *earleyRule_getp(earleyGrammar_t *earleyGrammarp, int rulei)
+/****************************************************************************/
+{
+  genericStack_t *ruleStackp;
+  earleyRule_t   *earleyRulep;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  ruleStackp = earleyGrammarp->ruleStackp;
+
+  if (! GENERICSTACK_IS_PTR(ruleStackp, rulei)) {
+    errno = ENOENT;
+    goto err;
+  }
+
+  earleyRulep = GENERICSTACK_GET_PTR(ruleStackp, rulei);
+  if (GENERICSTACK_ERROR(ruleStackp)) {
+    goto err;
+  }
+
+  goto done;
+
+ err:
+  earleyRulep = NULL;
+
+ done:
+  return earleyRulep;
+}
+
+/****************************************************************************/
+static void earleySymbol_freev(earleySymbol_t *earleySymbolp)
+/****************************************************************************/
+{
+  if (earleySymbolp != NULL) {
+    free(earleySymbolp);
+  }
+}
+
+/****************************************************************************/
+static void earleyRule_freev(earleyRule_t *earleyRulep)
+/****************************************************************************/
+{
+  if (earleyRulep != NULL) {
+    if (earleyRulep->rhsStackp != NULL) {
+      GENERICSTACK_RESET(earleyRulep->rhsStackp);
+    }
+    free(earleyRulep);
+  }
+}
 
 /****************************************************************************/
 /* earleyGrammar_newp                                                       */
@@ -20,8 +113,9 @@ earleyGrammar_t *earleyGrammar_newp(earleyGrammarOption_t *optionp)
 
   earleyGrammarp->symbolStackp = NULL;
   earleyGrammarp->ruleStackp   = NULL;
-  earleyGrammarp->precomputedb = 0;
+  earleyGrammarp->errori       = 0;
   earleyGrammarp->option       = (optionp != NULL) ? *optionp : earleyGrammarOptionDefault;
+  earleyGrammarp->precomputedb = 0;
 
   earleyGrammarp->symbolStackp = &(earleyGrammarp->_symbolStack);
   GENERICSTACK_INIT(earleyGrammarp->symbolStackp);
@@ -172,9 +266,7 @@ void earleyGrammar_freev(earleyGrammar_t *earleyGrammarp)
     if (symbolStackp != NULL) {
       for (i = 0; i < GENERICSTACK_USED(symbolStackp); i++) {
         earleySymbolp = (earleySymbol_t *) GENERICSTACK_GET_PTR(symbolStackp, i);
-        if (earleySymbolp != NULL) {
-          free(earleySymbolp);
-        }
+        earleySymbol_freev(earleySymbolp);
       }
       GENERICSTACK_RESET(symbolStackp);
     }
@@ -184,9 +276,7 @@ void earleyGrammar_freev(earleyGrammar_t *earleyGrammarp)
     if (ruleStackp != NULL) {
       for (i = 0; i < GENERICSTACK_USED(ruleStackp); i++) {
         earleyRulep = (earleyRule_t *) GENERICSTACK_GET_PTR(ruleStackp, i);
-        if (earleyRulep != NULL) {
-          free(earleyRulep);
-        }
+        earleyRule_freev(earleyRulep);
       }
       GENERICSTACK_RESET(ruleStackp);
     }
@@ -195,3 +285,378 @@ void earleyGrammar_freev(earleyGrammar_t *earleyGrammarp)
   }
 }
 
+/****************************************************************************/
+int earleyGrammar_newSymboli(earleyGrammar_t *earleyGrammarp, earleyGrammarSymbolOption_t *optionp)
+/****************************************************************************/
+{
+  earleySymbol_t *earleySymbolp = NULL;
+  genericStack_t *symbolStackp;
+  int             symboli;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  symbolStackp = earleyGrammarp->symbolStackp;
+
+  earleySymbolp = (earleySymbol_t *) malloc(sizeof(earleySymbol_t));
+  if (earleySymbolp == NULL) {
+    goto err;
+  }
+
+  earleySymbolp->idi             = GENERICSTACK_USED(symbolStackp);
+  earleySymbolp->propertyBitSeti = 0;
+  earleySymbolp->eventBitSeti    = 0;
+  earleySymbolp->option          = (optionp != NULL) ? *optionp : earleyGrammarSymbolOptionDefault;
+
+  GENERICSTACK_PUSH_PTR(symbolStackp, earleySymbolp);
+  if (GENERICSTACK_ERROR(symbolStackp)) {
+    goto err;
+  }
+
+  symboli = earleySymbolp->idi;
+  goto done;
+
+ err:
+  earleySymbol_freev(earleySymbolp);
+  symboli = -1;
+
+ done:
+  return symboli;
+}
+
+/****************************************************************************/
+short earleyGrammar_symbolPropertyb(earleyGrammar_t *earleyGrammarp, int symboli, int *earleySymbolPropertyBitSetp)
+/****************************************************************************/
+{
+  earleySymbol_t *earleySymbolp;
+  short           rcb;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  earleySymbolp = earleySymbol_getp(earleyGrammarp, symboli);
+  if (earleySymbolp == NULL) {
+    goto err;
+  }
+
+  if (earleySymbolPropertyBitSetp != NULL) {
+    *earleySymbolPropertyBitSetp = earleySymbolp->propertyBitSeti;
+  }
+
+  rcb = 1;
+  goto done;
+
+ err:
+  rcb = 0;
+
+ done:
+  return rcb;
+}
+
+/****************************************************************************/
+short earleyGrammar_symbolEventb(earleyGrammar_t *earleyGrammarp, int symboli, int *earleySymbolEventBitSetp)
+/****************************************************************************/
+{
+  earleySymbol_t *earleySymbolp;
+  short           rcb;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  earleySymbolp = earleySymbol_getp(earleyGrammarp, symboli);
+  if (earleySymbolp == NULL) {
+    goto err;
+  }
+
+  if (earleySymbolEventBitSetp != NULL) {
+    *earleySymbolEventBitSetp = earleySymbolp->eventBitSeti;
+  }
+
+  rcb = 1;
+  goto done;
+
+ err:
+  rcb = 0;
+
+ done:
+  return rcb;
+}
+
+/****************************************************************************/
+int earleyGrammar_newRulei(earleyGrammar_t *earleyGrammarp, earleyGrammarRuleOption_t *optionp,
+                           int lhsSymboli,
+                           size_t rhsSymboll, int *rhsSymbolip
+                           )
+/****************************************************************************/
+{
+  earleyRule_t   *earleyRulep = NULL;
+  earleySymbol_t *earleySymbolp;
+  genericStack_t *rhsStackp;
+  genericStack_t *ruleStackp;
+  int             rulei;
+  size_t          l;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  ruleStackp   = earleyGrammarp->ruleStackp;
+
+  earleyRulep = (earleyRule_t *) malloc(sizeof(earleyRule_t));
+  if (earleyRulep == NULL) {
+    goto err;
+  }
+
+  earleyRulep->idi             = GENERICSTACK_USED(ruleStackp);
+  earleyRulep->lshSymbolp      = NULL;
+  earleyRulep->rhsStackp       = NULL;
+  earleyRulep->propertyBitSeti = 0;
+  earleyRulep->option          = (optionp != NULL) ? *optionp : earleyGrammarRuleOptionDefault;
+
+  rhsStackp = &(earleyRulep->_rhsStack);
+  GENERICSTACK_INIT(rhsStackp);
+  if (GENERICSTACK_ERROR(rhsStackp)) {
+    goto err;
+  }
+  earleyRulep->rhsStackp = rhsStackp;
+
+  earleyRulep->lshSymbolp = earleySymbol_getp(earleyGrammarp, lhsSymboli);
+  if (earleyRulep->lshSymbolp == NULL) {
+    goto err;
+  }
+  for (l = 0; l < rhsSymboll; l++) {
+    earleySymbolp = earleySymbol_getp(earleyGrammarp, rhsSymbolip[l]);
+    if (earleySymbolp == NULL) {
+      goto err;
+    }
+    GENERICSTACK_PUSH_PTR(rhsStackp, earleySymbolp);
+    if (GENERICSTACK_ERROR(rhsStackp)) {
+      goto err;
+    }
+  }
+
+  rulei = earleySymbolp->idi;
+  goto done;
+
+ err:
+  earleyRule_freev(earleyRulep);
+  rulei = -1;
+
+ done:
+  return rulei;
+}
+
+/****************************************************************************/
+short earleyGrammar_rulePropertyb(earleyGrammar_t *earleyGrammarp, int rulei, int *earleyRulePropertyBitSetp)
+/****************************************************************************/
+{
+  earleyRule_t *earleyRulep;
+  short           rcb;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  earleyRulep = earleyRule_getp(earleyGrammarp, rulei);
+  if (earleyRulep == NULL) {
+    goto err;
+  }
+
+  if (earleyRulePropertyBitSetp != NULL) {
+    *earleyRulePropertyBitSetp = earleyRulep->propertyBitSeti;
+  }
+
+  rcb = 1;
+  goto done;
+
+ err:
+  rcb = 0;
+
+ done:
+  return rcb;
+}
+
+/****************************************************************************/
+int earleyGrammar_newSymbolExti(earleyGrammar_t *earleyGrammarp, short terminalb, short startb, int eventSeti)
+/****************************************************************************/
+{
+  earleyGrammarSymbolOption_t option = earleyGrammarSymbolOptionDefault;
+
+  option.terminalb = terminalb;
+  option.startb    = startb;
+  option.eventSeti = eventSeti;
+
+  return earleyGrammar_newSymboli(earleyGrammarp, &option);
+}
+
+/****************************************************************************/
+int earleyGrammar_newRuleExti(earleyGrammar_t *earleyGrammarp, int ranki, short nullRanksHighb, int lhsSymboli, ...)
+/****************************************************************************/
+{
+  earleyGrammarRuleOption_t option               = earleyGrammarRuleOptionDefault;
+  static const int          rhsSymbolStartAllocl = 16; /* Totally subjective -; */
+  size_t                    rhsSymbolAllocl      = 0;
+  size_t                    rhsSymboll           = 0;
+  size_t                    l                    = 0;
+  int                      *rhsSymbolip          = NULL;
+  int                      *tmpip;
+  int                       rhsSymboli;
+  size_t                    tmpl;
+  va_list                   ap;
+  int                       rci;
+
+  option.ranki          = ranki;
+  option.nullRanksHighb = nullRanksHighb;
+
+  va_start(ap, lhsSymboli);
+  while ((rhsSymboli = va_arg(ap, int)) >= 0) {
+    if (++rhsSymboll > rhsSymbolAllocl) {
+      if (rhsSymbolAllocl == 0) {
+        rhsSymbolip = (int *) malloc(rhsSymbolStartAllocl * sizeof(int));
+        if (rhsSymbolip == NULL) {
+          goto err;
+        }
+        rhsSymbolAllocl == rhsSymbolStartAllocl;
+      } else {
+        tmpl = rhsSymbolAllocl * 2;
+        /* Detect very improbable turnaround */
+        if (tmpl < rhsSymbolAllocl) {
+          errno = EINVAL;
+          goto err;
+        }
+        tmpip = (int *) realloc(rhsSymbolip, tmpl * sizeof(int));
+        if (tmpip == NULL) {
+          goto err;
+        }
+        rhsSymbolip = tmpip;
+      }
+    }
+
+    rhsSymbolip[l++] = rhsSymboli;
+  }
+  va_end(ap);
+
+  rci =  earleyGrammar_newRulei(earleyGrammarp, &option, lhsSymboli, rhsSymboll, rhsSymbolip);
+
+  goto done;
+
+ err:
+  rci = -1;
+
+ done:
+  if (rhsSymbolip != NULL) {
+    free(rhsSymbolip);
+  }
+
+  return rci;
+}
+
+/****************************************************************************/
+int earley_newSequenceExti(earleyGrammar_t *earleyGrammarp, int ranki, short nullRanksHighb,
+                           int lhsSymboli,
+                           int rhsSymboli, int minimumi, int separatorSymboli, short properb)
+/****************************************************************************/
+{
+  earleyGrammarRuleOption_t option;
+  int                       rhsSymbolip[1] = { rhsSymboli };
+
+  switch (minimumi) {
+  case '*':
+    minimumi = 0;
+    break;
+  case '+':
+    minimumi = 1;
+    break;
+  default:
+    break;
+  }
+  
+  option.ranki            = ranki;
+  option.nullRanksHighb   = nullRanksHighb;
+  option.sequenceb        = 1;
+  option.separatorSymboli = separatorSymboli;
+  option.properb          = properb;
+  option.minimumi         = minimumi;
+
+  return earleyGrammar_newRulei(earleyGrammarp, &option, lhsSymboli, 1, rhsSymbolip);
+}
+
+/****************************************************************************/
+short earleyGrammar_errorb(earleyGrammar_t *earleyGrammarp, int *errorip)
+/****************************************************************************/
+{
+  short rcb;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  if (errorip != NULL) {
+    *errorip = earleyGrammarp->errori;
+  }
+
+  rcb = 1;
+  goto done;
+
+ err:
+  rcb = 0;
+
+ done:
+  return rcb;
+}
+
+/****************************************************************************/
+short earleyGrammar_error_clearb(earleyGrammar_t *earleyGrammarp)
+/****************************************************************************/
+{
+  short rcb;
+
+  if (earleyGrammarp == NULL) {
+    errno = EINVAL;
+    goto err;
+  }
+
+  earleyGrammarp->errori = 0;
+
+  rcb = 1;
+  goto done;
+
+ err:
+  rcb = 0;
+
+ done:
+  return rcb;
+}
+
+/****************************************************************************/
+short earleyGrammar_precomputeb(earleyGrammar_t *earleyGrammarp)
+/****************************************************************************/
+{
+  /* TO DO */
+  return 0;
+}
+
+/****************************************************************************/
+short earleyGrammar_precompute_startb(earleyGrammar_t *earleyGrammarp, int starti)
+/****************************************************************************/
+{
+  /* TO DO */
+  return 0;
+}
+
+/****************************************************************************/
+short earleyGrammar_eventb(earleyGrammar_t *earleyGrammarp, size_t *eventlp, earleyGrammarEvent_t **eventpp, short exhaustionEventb, short forceReladb)
+/****************************************************************************/
+{
+  /* TO DO */
+  return 0;
+}
