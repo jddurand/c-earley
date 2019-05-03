@@ -679,8 +679,7 @@ short earleyGrammar_error_clearb(earleyGrammar_t *earleyGrammarp)
 short earleyGrammar_precomputeb(earleyGrammar_t *earleyGrammarp)
 /****************************************************************************/
 {
-  /* TO DO */
-  return 0;
+  return earleyGrammar_precompute_startb(earleyGrammarp, 0);
 }
 
 /****************************************************************************/
