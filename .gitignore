@@ -89,3 +89,4 @@ CPack*
 CTest*
 cmake_install.cmake
 *.VC.*
+Makefile
